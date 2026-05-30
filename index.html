@@ -3,134 +3,415 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NFT Gift Cases</title>
-    <!-- Подключаем Telegram Web App API -->
+    <title>NFT Cases WebApp Premium</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        :root {
+            --bg: #0a0813;
+            --card: #131125;
+            --accent: #00f0ff;
+            --accent-gradient: linear-gradient(135deg, #00f0ff, #7000ff);
+            --common: #4a4d53;
+            --rare: #d4af37;
+            --epic: #a335ee;
+            --legendary: #ff3e3e;
+        }
+        
         body {
-            background-color: #1a1a2e;
-            color: #ffffff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            text-align: center;
-            margin: 0;
-            padding: 20px;
+            background: var(--bg); color: #fff; font-family: system-ui, -apple-system, sans-serif;
+            margin: 0; padding: 0; overflow-x: hidden; padding-bottom: 90px;
         }
-        .header { margin-bottom: 30px; }
-        .balance { font-size: 20px; color: #00d2fc; font-weight: bold; }
-        
-        .case-card {
-            background: #16213e;
-            border-radius: 15px;
-            padding: 20px;
-            border: 2px solid #0f3460;
-            margin: 20px auto;
-            max-width: 300px;
-        }
-        
-        .btn-open {
-            background: linear-gradient(45deg, #e94560, #ff6b6b);
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            font-size: 18px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-weight: bold;
-            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
-            transition: 0.2s;
-        }
-        .btn-open:active { transform: scale(0.95); }
 
-        /* Стили для анимации выпадения дропа */
-        #drop-result {
-            margin-top: 25px;
-            font-size: 22px;
-            font-weight: bold;
-            min-height: 50px;
-            opacity: 0;
-            transition: opacity 0.5s ease-in-out;
+        /* Виджет баланса */
+        .header-status {
+            background: rgba(20, 17, 38, 0.7); backdrop-filter: blur(10px);
+            margin: 15px; padding: 15px; border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
         }
-        .rarity-Обычный { color: #8e9297; }
-        .rarity-Редкий { color: #f1c40f; }
-        .rarity-Эпический { color: #9b59b6; }
-        .rarity-Легендарный { color: #e74c3c; }
+        .balance-glow {
+            font-size: 28px; font-weight: 900; color: #00ff88;
+            text-shadow: 0 0 15px rgba(0,255,136,0.3);
+        }
+
+        /* Навигация */
+        .navbar {
+            display: flex; position: fixed; bottom: 0; width: 100%;
+            background: #0d0b1a; border-top: 1px solid #1f1b33; padding: 12px 0; z-index: 1000;
+        }
+        .nav-tab {
+            flex: 1; text-align: center; font-size: 12px; color: #625f78; cursor: pointer; transition: 0.3s;
+        }
+        .nav-tab.active { color: var(--accent); font-weight: bold; transform: scale(1.05); }
+
+        .screen { display: none; padding: 15px; animation: fadeIn 0.4s ease; }
+        .screen.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- КЕЙСЫ И АНИМАЦИЯ РУЛЕТКИ --- */
+        .case-card {
+            background: var(--card); border-radius: 16px; padding: 20px; margin-bottom: 15px;
+            border: 1px solid #1f1b33; text-align: center; position: relative; overflow: hidden;
+        }
+        .case-card::before {
+            content: ''; position: absolute; top:0; left:0; width: 100%; height: 3px; background: var(--accent-gradient);
+        }
+        
+        /* Слот-машина (Барабан) */
+        .roulette-container {
+            position: relative; width: 100%; height: 90px; background: #07050e;
+            border-radius: 12px; margin: 15px 0; overflow: hidden; border: 1px solid #252042;
+            display: none;
+        }
+        .roulette-wrapper {
+            display: flex; position: absolute; left: 0; top: 5px; height: 80px; transition: transform 4s cubic-bezier(0.1, 1, 0.1, 1);
+        }
+        .roulette-item {
+            width: 80px; height: 80px; margin-right: 6px; background: #1a1630; border-radius: 8px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 24px;
+            flex-shrink: 0; border-bottom: 4px solid var(--common);
+        }
+        .roulette-marker {
+            position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+            width: 4px; height: 100%; background: #ff007b; z-index: 10; box-shadow: 0 0 10px #ff007b;
+        }
+
+        /* Кнопки */
+        .btn-premium {
+            background: var(--accent-gradient); color: #fff; border: none; padding: 14px;
+            border-radius: 12px; font-weight: bold; width: 100%; cursor: pointer; font-size: 16px;
+            box-shadow: 0 4px 20px rgba(112, 0, 255, 0.3); transition: 0.2s;
+        }
+        .btn-premium:active { transform: scale(0.98); }
+
+        /* --- ЛАБОРАТОРИЯ (АПГРЕЙДЫ) --- */
+        .upgrade-display {
+            height: 150px; background: #07050e; border-radius: 16px; margin-bottom: 20px;
+            display: flex; align-items: center; justify-content: center; position: relative;
+            border: 1px solid #252042; overflow: hidden;
+        }
+        .upgrade-glow-effect {
+            position: absolute; width: 100px; height: 100px; background: var(--accent);
+            filter: blur(50px); opacity: 0; transition: 0.5s;
+        }
+        .upgrade-glow-effect.pulse { animation: neonPulse 1.5s infinite ease-in-out; opacity: 0.6; }
+        @keyframes neonPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.4); } }
+
+        /* Стили редкостей для элементов */
+        .item-common { border-bottom-color: var(--common) !important; }
+        .item-rare { border-bottom-color: var(--rare) !important; box-shadow: inset 0 0 10px rgba(212,175,55,0.2); }
+        .item-epic { border-bottom-color: var(--epic) !important; box-shadow: inset 0 0 10px rgba(163,53,238,0.2); }
+        .item-legendary { border-bottom-color: var(--legendary) !important; box-shadow: inset 0 0 15px rgba(255,62,62,0.3); }
+
+        .nft-row {
+            background: var(--card); padding: 12px; border-radius: 12px; margin-bottom: 10px;
+            display: flex; justify-content: space-between; align-items: center; border: 1px solid #1f1b33;
+        }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h2>🎁 Экосистема NFT Кейсов</h2>
-        <div class="balance">Твой баланс: <span id="user-balance">...</span> TON</div>
+    <div class="header-status">
+        <div id="username-slot" style="font-size: 13px; color: #8a87a1;">Загрузка аккаунта...</div>
+        <div class="balance-glow"><span id="balance-num">0.00</span> TON</div>
+        <div id="vip-slot" style="font-size: 11px; color: #ffaa00; margin-top: 5px;">VIP-статус</div>
     </div>
 
-    <div class="case-card">
-        <h3>📦 Обычный кейс</h3>
-        <p>Стоимость: 0.5 TON</p>
-        <button class="btn-open" onclick="openCase('common')">Открыть кейс</button>
+    <div id="screen-cases" class="screen active">
+        <h3 style="margin-top: 0;">🎁 Магазин Кейсов</h3>
+        
+        <div class="roulette-container" id="case-roulette">
+            <div class="roulette-marker"></div>
+            <div class="roulette-wrapper" id="roulette-roll"></div>
+        </div>
+
+        <div class="case-card">
+            <div style="font-size: 40px; margin-bottom: 5px;">📦</div>
+            <div style="font-weight: bold; font-size: 18px;">Обычный Кейс</div>
+            <div style="color: #8a87a1; font-size: 13px; margin-bottom: 15px;">Шанс дропа распределен скрытно</div>
+            <button class="btn-premium" onclick="playCaseAnimation('common')">Открыть за 0.50 TON</button>
+        </div>
+
+        <div class="case-card">
+            <div style="font-size: 40px; margin-bottom: 5px;">🔥</div>
+            <div style="font-weight: bold; font-size: 18px;">Премиум Кейс</div>
+            <div style="color: #8a87a1; font-size: 13px; margin-bottom: 15px;">Повышенный шанс на Легенду</div>
+            <button class="btn-premium" style="background: linear-gradient(135deg, #ff9900, #ff5500);" onclick="playCaseAnimation('premium')">Открыть за 2.00 TON</button>
+        </div>
     </div>
 
-    <!-- Блок отображения приза -->
-    <div id="drop-result"></div>
+    <div id="screen-lab" class="screen">
+        <h3 style="margin-top: 0;">🚀 Лаборатория Апгрейдов</h3>
+        <div class="upgrade-display" id="upgrade-box">
+            <div class="upgrade-glow-effect" id="upgrade-glow"></div>
+            <div id="upgrade-status-text" style="font-size: 18px; font-weight: bold; z-index: 5;">Поместите NFT для апгрейда</div>
+        </div>
+        
+        <div class="case-card">
+            <label style="font-size: 12px; color: #8a87a1; display:block; margin-bottom:5px;">Уровень риска:</label>
+            <select id="risk-select" style="width:100%; padding:12px; background:#07050e; color:#fff; border:1px solid #252042; border-radius:10px; margin-bottom:15px;">
+                <option value="safe">Зеленый (Безопасный х1.1)</option>
+                <option value="medium" selected>Желтый (Средний х2.0)</option>
+                <option value="aggressive">Красный (Агрессивный х5.0)</option>
+            </select>
+            <button class="btn-premium" onclick="executeUpgrade()">Запустить Синтез</button>
+        </div>
+
+        <button class="btn-premium" style="background: #251f47;" onclick="executeContract()">♻️ Подписать контракт утилизации (3 к 1)</button>
+    </div>
+
+    <div id="screen-pvp" class="screen">
+        <h3 style="margin-top: 0;">⚔️ Арена Дуэлей</h3>
+        <button class="btn-premium" style="margin-bottom: 15px;" onclick="createPvpRoom()">Создать комнату боя</button>
+        <div id="pvp-container"></div>
+    </div>
+
+    <div id="screen-market" class="screen">
+        <h3 style="margin-top: 0;">🛍 P2P Маркет</h3>
+        <div id="market-container"></div>
+    </div>
+
+    <div id="screen-inventory" class="screen">
+        <h3 style="margin-top: 0;">💎 Твои NFT Предметы</h3>
+        <div id="inventory-container"></div>
+    </div>
+
+    <div class="navbar">
+        <div class="nav-tab active" onclick="navigate('cases', this)">🎁<br>Кейсы</div>
+        <div class="nav-tab" onclick="navigate('lab', this)">🚀<br>Крафт</div>
+        <div class="nav-tab" onclick="navigate('pvp', this)">⚔️<br>PvP</div>
+        <div class="nav-tab" onclick="navigate('market', this)">🛍<br>Маркет</div>
+        <div class="nav-tab" onclick="navigate('inventory', this)">💎<br>Инвентарь</div>
+    </div>
 
     <script>
-        // Инициализируем Telegram Web App
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Расширяем на весь экран
-
-        // Получаем данные пользователя Telegram
+        tg.expand();
+        
         const user = tg.initDataUnsafe.user;
-        const userId = user ? user.id : 12345; // 12345 - дефолт для тестов в обычном браузере
-        const username = user ? user.username : "Guest";
+        const uid = user ? user.id : 777;
+        const username = user ? user.username : "Разработчик";
 
-        // Функция обновления баланса с сервера
-        async function updateBalance() {
-            try {
-                let response = await fetch(`/api/user/${userId}?username=${username}`);
-                let data = await response.json();
-                document.getElementById('user-balance').innerText = data.balance_ton.toFixed(2);
-            } catch (err) {
-                console.error("Ошибка обновления профиля", err);
-            }
-        }
+        // Пул иконок для анимации кейсов
+        const poolItems = [
+            {emoji: "⚪", rarity: "item-common"},
+            {emoji: "💛", rarity: "item-rare"},
+            {emoji: "🔮", rarity: "item-epic"},
+            {emoji: "👑", rarity: "item-legendary"}
+        ];
 
-        // Функция открытия кейса
-        async function openCase(caseType) {
-            const resultDiv = document.getElementById('drop-result');
-            resultDiv.style.opacity = 0;
+        function navigate(screen, el) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(`screen-${screen}`).classList.add('active');
+            el.classList.add('active');
             
-            try {
-                let response = await fetch('/api/open_case', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId, case_type: caseType })
-                });
-                
-                let data = await response.json();
-                
-                if (data.error) {
-                    tg.showAlert(`❌ Ошибка: ${data.error}`);
-                    return;
-                }
-
-                // Визуальный эффект "крутилки" (задержка 1 секунда для азарта)
-                resultDiv.innerHTML = "🎰 Открываем...";
-                resultDiv.className = "";
-                resultDiv.style.opacity = 1;
-
-                setTimeout(() => {
-                    resultDiv.innerHTML = `🎉 Выпало:<br><span class="rarity-${data.rarity}">${data.nft_name}</span>`;
-                    // Вызываем легкую вибрацию на телефоне игрока
-                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-                    updateBalance();
-                }, 1000);
-
-            } catch (err) {
-                tg.showAlert("Ошибка при связи с сервером");
-            }
+            if(screen === 'inventory') renderInventory();
+            if(screen === 'market') renderMarket();
+            if(screen === 'pvp') renderPvp();
         }
 
-        // Запуск при загрузке страницы
-        updateBalance();
+        async function fetchProfile() {
+            let res = await fetch(`/api/profile/${uid}?username=${username}`);
+            let data = await res.json();
+            document.getElementById('username-slot').innerText = `@${data.username}`;
+            document.getElementById('balance-num').innerText = data.balance_ton.toFixed(2);
+            document.getElementById('vip-slot').innerText = `VIP Уровень: ${data.vip_level} | Оборот: ${data.total_turnover} TON`;
+        }
+
+        // АНИМАЦИЯ КЕЙСА (CS:GO STYLE)
+        async function playCaseAnimation(caseType) {
+            let roulette = document.getElementById('case-roulette');
+            let rollTrack = document.getElementById('roulette-roll');
+            
+            // Запрос на сервер до начала анимации
+            let res = await fetch('/api/case/open', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({user_id: uid, case_type: caseType})
+            });
+            let data = await res.json();
+            if(data.error) { tg.showAlert(data.error); return; }
+
+            // Генерируем 30 случайных плашек для прокрутки
+            rollTrack.innerHTML = '';
+            rollTrack.style.transition = 'none';
+            rollTrack.style.transform = 'translateX(0px)';
+            
+            for(let i=0; i<30; i++) {
+                let randItem = poolItems[Math.floor(Math.random() * poolItems.length)];
+                // 25-й элемент сделаем финалистом (тот, что выпал на сервере)
+                if(i === 25) {
+                    let rClass = data.rarity === 'Обычный' ? 'item-common' : data.rarity === 'Редкий' ? 'item-rare' : data.rarity === 'Эпический' ? 'item-epic' : 'item-legendary';
+                    let rEmoji = data.rarity === 'Обычный' ? '⚪' : data.rarity === 'Редкий' ? '💛' : data.rarity === 'Эпический' ? '🔮' : '👑';
+                    rollTrack.innerHTML += `<div class="roulette-item ${rClass}">${rEmoji}</div>`;
+                } else {
+                    rollTrack.innerHTML += `<div class="roulette-item ${randItem.rarity}">${randItem.emoji}</div>`;
+                }
+            }
+
+            roulette.style.display = 'block';
+            
+            // Рассчитываем точный сдвиг на 25-й элемент по центру
+            setTimeout(() => {
+                rollTrack.style.transition = 'transform 4s cubic-bezier(0.1, 1, 0.1, 1)';
+                // Ширина элемента 80px + margin 6px = 86px. Сдвиг контейнера.
+                let targetShift = -(25 * 86) + (roulette.offsetWidth / 2) - 43;
+                rollTrack.style.transform = `translateX(${targetShift}px)`;
+            }, 50);
+
+            setTimeout(() => {
+                if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                tg.showAlert(`🎉 Выпало: ${data.nft_name} [${data.rarity}]`);
+                roulette.style.display = 'none';
+                fetchProfile();
+            }, 4200);
+        }
+
+        // АНИМАЦИЯ АПГРЕЙДА
+        async function executeUpgrade() {
+            let glow = document.getElementById('upgrade-glow');
+            let txt = document.getElementById('upgrade-status-text');
+            let risk = document.getElementById('risk-select').value;
+
+            txt.innerText = "⚡ Запуск ядерного синтеза...";
+            glow.classList.add('pulse');
+
+            let res = await fetch('/api/lab/upgrade', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({user_id: uid, risk_mode: risk})
+            });
+            let data = await res.json();
+
+            setTimeout(() => {
+                glow.classList.remove('pulse');
+                if(data.error) {
+                    txt.innerText = "Поместите NFT для апгрейда";
+                    tg.showAlert(data.error);
+                } else {
+                    txt.innerText = data.status.includes('Успех') ? "🔥 СИНТЕЗ СТАБИЛЕН!" : "💥 СИНТЕЗ РАЗРУШЕН!";
+                    tg.showAlert(data.status);
+                }
+                fetchProfile();
+            }, 2000);
+        }
+
+        async function executeContract() {
+            let res = await fetch('/api/lab/contract', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({user_id: uid})
+            });
+            let data = await res.json();
+            tg.showAlert(data.status || data.error);
+            fetchProfile();
+        }
+
+        async function renderInventory() {
+            let res = await fetch(`/api/inventory/${uid}`);
+            let data = await res.json();
+            let div = document.getElementById('inventory-container');
+            div.innerHTML = data.length === 0 ? '<p style="color:#625f78">Инвентарь пуст</p>' : '';
+            data.forEach(i => {
+                div.innerHTML += `
+                <div class="nft-row">
+                    <div><b>${i.nft_name}</b><br><span style="font-size:12px;color:#8a87a1">${i.rarity}</span></div>
+                    <div>
+                        <button class="btn-premium" style="padding:6px 12px; font-size:12px; width:auto; display:inline;" onclick="postToMarket(${i.item_id})">Рынок</button>
+                        <button class="btn-premium" style="padding:6px 12px; font-size:12px; width:auto; display:inline; background:#ff3e3e;" onclick="burnWithdraw(${i.item_id})">Вывод</button>
+                    </div>
+                </div>`;
+            });
+        }
+
+        async function burnWithdraw(id) {
+            let res = await fetch('/api/nft/withdraw', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({user_id: uid, item_id: id})
+            });
+            let data = await res.json();
+            tg.showAlert(data.status || data.error);
+            renderInventory();
+        }
+
+        async function postToMarket(id) {
+            let price = prompt("Цена продажи (TON):");
+            if(!price || isNaN(price)) return;
+            await fetch('/api/market/list', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({user_id: uid, item_id: id, price: parseFloat(price)})
+            });
+            renderInventory();
+        }
+
+        async function renderMarket() {
+            let res = await fetch('/api/market');
+            let data = await res.json();
+            let div = document.getElementById('market-container');
+            div.innerHTML = data.length === 0 ? '<p style="color:#625f78">На рынке нет лотов</p>' : '';
+            data.forEach(l => {
+                div.innerHTML += `
+                <div class="nft-row">
+                    <div><b>${l.nft_name}</b> [${l.rarity}]<br><span style="color:#00ff88">${l.price_ton} TON</span></div>
+                    <button class="btn-premium" style="padding:6px 12px; font-size:12px; width:auto;" onclick="buyLot(${l.lot_id})">Купить</button>
+                </div>`;
+            });
+        }
+
+        async function buyLot(id) {
+            let res = await fetch('/api/market/buy', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({user_id: uid, lot_id: id})
+            });
+            let data = await res.json();
+            if(data.error) tg.showAlert(data.error);
+            renderMarket();
+            fetchProfile();
+        }
+
+        async function renderPvp() {
+            let res = await fetch('/api/pvp');
+            let data = await res.json();
+            let div = document.getElementById('pvp-container');
+            div.innerHTML = data.length === 0 ? '<p style="color:#625f78">Лобби дуэлей пусты</p>' : '';
+            data.forEach(p => {
+                div.innerHTML += `
+                <div class="nft-row" style="border-left: 3px solid #ff3e3e;">
+                    <div>⚔️ Дуэль #${p.duel_id}<br><span style="font-size:12px;color:#8a87a1">Нужен предмет: ${p.required_rarity}</span></div>
+                    <button class="btn-premium" style="padding:6px 12px; font-size:12px; width:auto; background:#ff3e3e;" onclick="joinPvp(${p.duel_id})">Принять бой</button>
+                </div>`;
+            });
+        }
+
+        async function createPvpRoom() {
+            let res = await fetch('/api/pvp/create', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({user_id: uid})
+            });
+            let data = await res.json();
+            if(data.error) tg.showAlert(data.error);
+            renderPvp();
+        }
+
+        async function joinPvp(id) {
+            let res = await fetch('/api/pvp/accept', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({user_id: uid, duel_id: id})
+            });
+            let data = await res.json();
+            tg.showAlert(data.status || data.error);
+            renderPvp();
+            fetchProfile();
+        }
+
+        // Старт
+        fetchProfile();
     </script>
 </body>
 </html>
