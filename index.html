@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFT Gift Cases</title>
+    <!-- Подключаем Telegram Web App API -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            background-color: #1a1a2e;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .header { margin-bottom: 30px; }
+        .balance { font-size: 20px; color: #00d2fc; font-weight: bold; }
+        
+        .case-card {
+            background: #16213e;
+            border-radius: 15px;
+            padding: 20px;
+            border: 2px solid #0f3460;
+            margin: 20px auto;
+            max-width: 300px;
+        }
+        
+        .btn-open {
+            background: linear-gradient(45deg, #e94560, #ff6b6b);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
+            transition: 0.2s;
+        }
+        .btn-open:active { transform: scale(0.95); }
+
+        /* Стили для анимации выпадения дропа */
+        #drop-result {
+            margin-top: 25px;
+            font-size: 22px;
+            font-weight: bold;
+            min-height: 50px;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .rarity-Обычный { color: #8e9297; }
+        .rarity-Редкий { color: #f1c40f; }
+        .rarity-Эпический { color: #9b59b6; }
+        .rarity-Легендарный { color: #e74c3c; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>🎁 Экосистема NFT Кейсов</h2>
+        <div class="balance">Твой баланс: <span id="user-balance">...</span> TON</div>
+    </div>
+
+    <div class="case-card">
+        <h3>📦 Обычный кейс</h3>
+        <p>Стоимость: 0.5 TON</p>
+        <button class="btn-open" onclick="openCase('common')">Открыть кейс</button>
+    </div>
+
+    <!-- Блок отображения приза -->
+    <div id="drop-result"></div>
+
+    <script>
+        // Инициализируем Telegram Web App
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Расширяем на весь экран
+
+        // Получаем данные пользователя Telegram
+        const user = tg.initDataUnsafe.user;
+        const userId = user ? user.id : 12345; // 12345 - дефолт для тестов в обычном браузере
+        const username = user ? user.username : "Guest";
+
+        // Функция обновления баланса с сервера
+        async function updateBalance() {
+            try {
+                let response = await fetch(`/api/user/${userId}?username=${username}`);
+                let data = await response.json();
+                document.getElementById('user-balance').innerText = data.balance_ton.toFixed(2);
+            } catch (err) {
+                console.error("Ошибка обновления профиля", err);
+            }
+        }
+
+        // Функция открытия кейса
+        async function openCase(caseType) {
+            const resultDiv = document.getElementById('drop-result');
+            resultDiv.style.opacity = 0;
+            
+            try {
+                let response = await fetch('/api/open_case', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, case_type: caseType })
+                });
+                
+                let data = await response.json();
+                
+                if (data.error) {
+                    tg.showAlert(`❌ Ошибка: ${data.error}`);
+                    return;
+                }
+
+                // Визуальный эффект "крутилки" (задержка 1 секунда для азарта)
+                resultDiv.innerHTML = "🎰 Открываем...";
+                resultDiv.className = "";
+                resultDiv.style.opacity = 1;
+
+                setTimeout(() => {
+                    resultDiv.innerHTML = `🎉 Выпало:<br><span class="rarity-${data.rarity}">${data.nft_name}</span>`;
+                    // Вызываем легкую вибрацию на телефоне игрока
+                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                    updateBalance();
+                }, 1000);
+
+            } catch (err) {
+                tg.showAlert("Ошибка при связи с сервером");
+            }
+        }
+
+        // Запуск при загрузке страницы
+        updateBalance();
+    </script>
+</body>
+</html>
